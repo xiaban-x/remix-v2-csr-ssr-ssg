@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 
-// 模拟 API 数据获取 (函数保持不变)
+// 模拟 API 数据获取
 const fetchData = async (): Promise<{ message: string; timestamp: string }> => {
   await new Promise(resolve => setTimeout(resolve, 1000)); // 模拟网络延迟
   return {
@@ -17,37 +17,38 @@ export default function CSRPage() {
   const [loading, setLoading] = useState(true);
   const [count, setCount] = useState(0);
 
-  // 这是实现纯 CSR 的核心
+  // CSR 核心：客户端数据获取
   useEffect(() => {
-    // 1. 设置一个标志位，用于判断当前 effect 是否已被清理
-    let isCancelled = false;
+    let cancelled = false;
     
-    setLoading(true); // 每次重新获取时都显示加载状态
-
-    fetchData().then(result => {
-      // 2. 收到数据后，只有在该 effect 没有被清理的情况下才更新状态
-      if (!isCancelled) {
-        setData(result);
-        setLoading(false);
+    const loadData = async () => {
+      if (!cancelled) {
+        setLoading(true);
+        const result = await fetchData();
+        if (!cancelled) {
+          setData(result);
+          setLoading(false);
+        }
       }
-    });
-
-    // 3. 返回一个清理函数
-    //    在 React 严格模式下，组件卸载时会调用它
-    return () => {
-      isCancelled = true;
     };
-  }, []); // 空依赖数组确保只在组件首次挂载时运行
+    
+    loadData();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  // “重新获取”按钮的逻辑也应该使用这个健壮的模式
-  // 但为了演示简单，我们这里只处理初次加载
   const handleRefetch = () => {
     setLoading(true);
     fetchData().then(result => {
       setData(result);
       setLoading(false);
     });
-  }
+  };
+
+  const increment = () => setCount(prev => prev + 1);
+  const decrement = () => setCount(prev => prev - 1);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
